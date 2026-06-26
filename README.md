@@ -1,6 +1,6 @@
 # 🌐 Website Design Development Agent
 
-[![Kudil-Observer CI](https://github.com/YOUR_USERNAME/website-design-agent/actions/workflows/kudil-observer.yml/badge.svg)](https://github.com/YOUR_USERNAME/website-design-agent/actions/workflows/kudil-observer.yml)
+[![Kudil-Observer CI](https://github.com/JaithraSarma/website-design-agent/actions/workflows/kudil-observer.yml/badge.svg)](https://github.com/JaithraSarma/website-design-agent/actions/workflows/kudil-observer.yml)
 
 An AI-powered dashboard for generating, previewing, and managing web projects using **React** and **Tailwind CSS**. Built with **Dyad** as the local orchestrator, powered by the **Google Gemini API**.
 
@@ -33,7 +33,7 @@ An AI-powered dashboard for generating, previewing, and managing web projects us
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/website-design-agent.git
+git clone https://github.com/JaithraSarma/website-design-agent.git
 cd website-design-agent
 
 # Install dependencies

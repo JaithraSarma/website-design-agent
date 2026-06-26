@@ -290,7 +290,7 @@ The final step outputs a structured JSON log to stdout. This is the **handoff po
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/website-design-agent.git
+git clone https://github.com/JaithraSarma/website-design-agent.git
 cd website-design-agent
 
 # 2. Install dependencies
