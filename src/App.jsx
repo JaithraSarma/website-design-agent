@@ -1,670 +1,886 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
+import Header from './components/Header';
+import Sidebar from './components/Sidebar';
+import ChatPanel from './components/ChatPanel';
+import PreviewPanel from './components/PreviewPanel';
+import SettingsModal from './components/SettingsModal';
 
-const INITIAL_FILES = [
-  { id: 1, name: 'index.html', type: 'html', active: false },
-  { id: 2, name: 'App.jsx', type: 'jsx', active: true },
-  { id: 3, name: 'components/', type: 'folder', expanded: true, children: [
-    { id: 4, name: 'Header.jsx', type: 'jsx', active: false },
-    { id: 5, name: 'Hero.jsx', type: 'jsx', active: false },
-    { id: 6, name: 'Footer.jsx', type: 'jsx', active: false },
-  ]},
-  { id: 7, name: 'styles/', type: 'folder', expanded: false, children: [
-    { id: 8, name: 'index.css', type: 'css', active: false },
-    { id: 9, name: 'tailwind.config.js', type: 'js', active: false },
-  ]},
-  { id: 10, name: 'package.json', type: 'json', active: false },
-  { id: 11, name: 'vite.config.js', type: 'js', active: false },
-];
-
-const FILE_ICONS = {
-  html: { icon: '🌐', color: '#e34c26' },
-  jsx: { icon: '⚛️', color: '#61dafb' },
-  js: { icon: '📄', color: '#f7df1e' },
-  css: { icon: '🎨', color: '#264de4' },
-  json: { icon: '{ }', color: '#cbcb41' },
-  folder: { icon: '📁', color: '#e8c07d' },
-};
-
-const PREVIEW_HTML = `<!DOCTYPE html>
+// Helper: initial files content template definitions
+const INITIAL_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Website Preview</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
+  <title>AgentFlow SaaS Landing Page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+    body {
+      font-family: 'Outfit', sans-serif;
     }
   </style>
 </head>
-<body class="text-white">
-  <nav class="border-b border-white/10 backdrop-blur-md bg-white/5">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold">A</div>
-        <span class="font-semibold text-white">AgentFlow</span>
+<body class="bg-[#0f172a] text-white min-h-screen">
+  <div id="root"></div>
+</body>
+</html>`;
+
+
+const INITIAL_HEADER = `import React from 'react';
+
+export default function Header() {
+  return (
+    <nav className="border-b border-white/5 bg-slate-950/65 backdrop-blur-md sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/10">
+            A
+          </div>
+          <span className="font-semibold text-white tracking-wide">AgentFlow</span>
+        </div>
+        <div className="flex items-center gap-6 text-sm text-slate-400 font-medium">
+          <a href="#" className="hover:text-white transition-colors">Features</a>
+          <a href="#" className="hover:text-white transition-colors">Pricing</a>
+          <a href="#" className="hover:text-white transition-colors">Docs</a>
+          <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-all hover:shadow-lg hover:shadow-blue-500/25">
+            Get Started
+          </button>
+        </div>
       </div>
-      <div class="flex items-center gap-6 text-sm text-white/60">
-        <a href="#" class="hover:text-white transition-colors">Features</a>
-        <a href="#" class="hover:text-white transition-colors">Docs</a>
-        <a href="#" class="hover:text-white transition-colors">Pricing</a>
-        <button class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm transition-colors">Get Started</button>
+    </nav>
+  );
+}`;
+
+
+const INITIAL_PACKAGE = `{
+  "name": "agentflow-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "vite": "^6.0.0"
+  }
+}`;
+
+const INITIAL_VITE = `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+});`;
+
+// Preview iframe source generator for each state
+const getPreviewHtml = (state, theme = 'blue') => {
+  const isPurple = theme === 'purple';
+  const brandGradient = isPurple 
+    ? 'from-purple-400 via-indigo-400 to-pink-400' 
+    : 'from-blue-400 via-indigo-400 to-purple-400';
+  const buttonBg = isPurple ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/25' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/25';
+  const tagText = isPurple ? 'text-purple-400' : 'text-blue-400';
+  const tagBg = isPurple ? 'bg-purple-500/10 border-purple-500/20' : 'bg-blue-500/10 border-blue-500/20';
+  const logoBg = isPurple ? 'from-purple-500 to-pink-600' : 'from-blue-500 to-indigo-600';
+
+  if (state === 'dashboard') {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentFlow Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background-color: #090d16; }
+  </style>
+</head>
+<body class="text-slate-100 flex min-h-screen">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-[#0f1524] border-r border-slate-800 flex flex-col justify-between">
+    <div>
+      <div class="p-6 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br ${logoBg} flex items-center justify-center font-bold text-white">D</div>
+        <span class="font-bold text-white text-lg">AgentFlow</span>
+      </div>
+      <nav class="px-4 py-2 space-y-1">
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/15 font-semibold text-sm">📊 Dashboard</a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 font-semibold text-sm transition-all">📂 Projects</a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 font-semibold text-sm transition-all">⚙ Settings</a>
+      </nav>
+    </div>
+    <div class="p-4 border-t border-slate-850 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-semibold text-sm text-slate-300">JS</div>
+      <div>
+        <div class="text-xs font-bold text-white">Jaithra Sarma</div>
+        <div class="text-[10px] text-slate-500 font-medium">Administrator</div>
       </div>
     </div>
-  </nav>
-  <main class="flex-1 max-w-6xl mx-auto px-6 py-20 text-center">
-    <div class="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs px-3 py-1.5 rounded-full mb-8">
-      <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-      AI-Powered Web Design Agent
-    </div>
-    <h1 class="text-5xl font-bold text-white mb-6 leading-tight">
-      Build Stunning Websites<br/>
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400">With AI Intelligence</span>
-    </h1>
-    <p class="text-white/60 text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
-      Describe your vision, and our AI agent generates production-ready React components with Tailwind CSS — live in seconds.
-    </p>
-    <div class="flex items-center gap-4 justify-center">
-      <button class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25">Start Building Free</button>
-      <button class="border border-white/20 hover:border-white/40 text-white px-8 py-3 rounded-xl font-medium transition-all">View Examples →</button>
-    </div>
-    <div class="mt-20 grid grid-cols-3 gap-6">
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/8 transition-colors">
-        <div class="text-3xl mb-3">⚡</div>
-        <h3 class="font-semibold text-white mb-2">Instant Generation</h3>
-        <p class="text-white/50 text-sm">From prompt to pixel-perfect code in under 5 seconds</p>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-8 space-y-8 overflow-y-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Welcome Back, Jaithra</h1>
+        <p class="text-slate-500 text-sm">Monitor compilation tasks and server environments.</p>
       </div>
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/8 transition-colors">
-        <div class="text-3xl mb-3">🎨</div>
-        <h3 class="font-semibold text-white mb-2">Design-Aware AI</h3>
-        <p class="text-white/50 text-sm">Understands aesthetics, layout, and modern UI patterns</p>
+      <button class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/10 transition-all">+ Launch Deploy</button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-[#0f1524] border border-slate-800 p-6 rounded-2xl">
+        <div class="text-slate-500 text-xs font-bold uppercase tracking-wider">Project Deployments</div>
+        <div class="text-3xl font-bold mt-2 text-white">12</div>
+        <div class="text-xs text-emerald-400 mt-1 font-semibold">▲ 24% this week</div>
       </div>
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/8 transition-colors">
-        <div class="text-3xl mb-3">🚀</div>
-        <h3 class="font-semibold text-white mb-2">Production Ready</h3>
-        <p class="text-white/50 text-sm">Clean, accessible React + Tailwind code you can ship today</p>
+      <div class="bg-[#0f1524] border border-slate-800 p-6 rounded-2xl">
+        <div class="text-slate-500 text-xs font-bold uppercase tracking-wider">Gemini API Invocations</div>
+        <div class="text-3xl font-bold mt-2 text-white">4,812</div>
+        <div class="text-xs text-emerald-400 mt-1 font-semibold">▲ 8.1% average speed</div>
+      </div>
+      <div class="bg-[#0f1524] border border-slate-800 p-6 rounded-2xl">
+        <div class="text-slate-500 text-xs font-bold uppercase tracking-wider">Network Success Rate</div>
+        <div class="text-3xl font-bold mt-2 text-white">99.98%</div>
+        <div class="text-xs text-slate-500 mt-1 font-semibold">Local HMR Port active</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-[#0f1524] border border-slate-800 rounded-2xl overflow-hidden">
+      <div class="p-6 border-b border-slate-850 flex justify-between items-center">
+        <h3 class="font-bold text-white">Recent HMR Builds</h3>
+        <span class="text-xs text-blue-400 font-semibold cursor-pointer">View All</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-400">
+          <thead class="bg-slate-900/50 text-xs uppercase font-bold text-slate-500 border-b border-slate-850">
+            <tr>
+              <th class="p-4">Target Component</th>
+              <th class="p-4">Compiled Port</th>
+              <th class="p-4">Time</th>
+              <th class="p-4">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-850">
+            <tr>
+              <td class="p-4 font-semibold text-white">Hero.jsx</td>
+              <td class="p-4 font-mono text-xs">localhost:5173</td>
+              <td class="p-4">12 mins ago</td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">Passed</span></td>
+            </tr>
+            <tr>
+              <td class="p-4 font-semibold text-white">Pricing.jsx</td>
+              <td class="p-4 font-mono text-xs">localhost:5173</td>
+              <td class="p-4">32 mins ago</td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">Passed</span></td>
+            </tr>
+            <tr>
+              <td class="p-4 font-semibold text-white">Header.jsx</td>
+              <td class="p-4 font-mono text-xs">localhost:5173</td>
+              <td class="p-4">1 hour ago</td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">Passed</span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </main>
-  <footer class="border-t border-white/10 py-6">
-    <div class="max-w-6xl mx-auto px-6 flex items-center justify-between text-white/40 text-sm">
-      <span>© 2025 AgentFlow. All rights reserved.</span>
-      <div class="flex gap-6">
-        <a href="#" class="hover:text-white/60 transition-colors">Privacy</a>
-        <a href="#" class="hover:text-white/60 transition-colors">Terms</a>
-        <a href="#" class="hover:text-white/60 transition-colors">Contact</a>
+</body>
+</html>`;
+  }
+
+  // Base Landing Page templates (optionally with Pricing & Testimonials)
+  const showPricing = state === 'pricing' || state === 'pricing_purple' || state === 'pricing_testimonials';
+  const showTestimonials = state === 'testimonials' || state === 'pricing_testimonials';
+
+  const pricingSection = showPricing ? `
+  <section class="py-20 border-t border-white/5 bg-slate-900/30">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold text-white mb-4">Flexible Pricing Tiers</h2>
+      <p class="text-slate-400 max-w-md mx-auto mb-16 text-sm">Unlock the full power of AI generation workflows with transparent key configurations.</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Tier 1 -->
+        <div class="bg-slate-950 border border-white/5 p-8 rounded-2xl hover:border-white/10 transition-colors text-left flex flex-col justify-between">
+          <div>
+            <h3 class="font-semibold text-lg text-white">Starter</h3>
+            <div class="text-2xl font-bold mt-4 text-white">Free</div>
+            <p class="text-slate-500 text-xs mt-2">Bring your own Gemini API keys and build locally.</p>
+            <ul class="space-y-3 mt-8 text-xs text-slate-400">
+              <li>✓ Basic UI Generations</li>
+              <li>✓ Local Iframe Previews</li>
+              <li>✓ Export Code Files</li>
+            </ul>
+          </div>
+          <button class="w-full mt-8 py-2.5 border border-white/10 hover:bg-white/5 text-white rounded-xl text-xs font-semibold transition-all">Get Started</button>
+        </div>
+
+        <!-- Tier 2 -->
+        <div class="bg-slate-950 border-2 border-blue-500/40 p-8 rounded-2xl relative text-left flex flex-col justify-between shadow-xl shadow-blue-500/5">
+          <span class="absolute top-0 right-6 -translate-y-1/2 bg-blue-600 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Popular</span>
+          <div>
+            <h3 class="font-semibold text-lg text-white">Professional</h3>
+            <div class="text-2xl font-bold mt-4 text-white">$29<span class="text-xs text-slate-500 font-normal">/mo</span></div>
+            <p class="text-slate-500 text-xs mt-2">Full Dyad orchestrator workspace with automatic key routing.</p>
+            <ul class="space-y-3 mt-8 text-xs text-slate-400">
+              <li>✓ Unlimited Complex Layouts</li>
+              <li>✓ Interactive Sandbox Previews</li>
+              <li>✓ Custom Component Sync</li>
+              <li>✓ High Priority Support</li>
+            </ul>
+          </div>
+          <button class="w-full mt-8 py-2.5 ${buttonBg} text-white rounded-xl text-xs font-semibold transition-all shadow-lg">Upgrade Now</button>
+        </div>
+
+        <!-- Tier 3 -->
+        <div class="bg-slate-950 border border-white/5 p-8 rounded-2xl hover:border-white/10 transition-colors text-left flex flex-col justify-between">
+          <div>
+            <h3 class="font-semibold text-lg text-white">Enterprise</h3>
+            <div class="text-2xl font-bold mt-4 text-white">Custom</div>
+            <p class="text-slate-500 text-xs mt-2">Full scale observers and secure team workspaces.</p>
+            <ul class="space-y-3 mt-8 text-xs text-slate-400">
+              <li>✓ Custom CI/CD Test Hooks</li>
+              <li>✓ Unified Orchestration</li>
+              <li>✓ SOC2 Environment Hygiene</li>
+            </ul>
+          </div>
+          <button class="w-full mt-8 py-2.5 border border-white/10 hover:bg-white/5 text-white rounded-xl text-xs font-semibold transition-all">Talk to Sales</button>
+        </div>
+      </div>
+    </div>
+  </section>` : '';
+
+  const testimonialsSection = showTestimonials ? `
+  <section class="py-20 border-t border-white/5">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold text-white mb-4">Loved by AI Engineers</h2>
+      <p class="text-slate-400 max-w-md mx-auto mb-16 text-sm">Read how developers are using AgentFlow and Dyad to bootstrap landing pages in seconds.</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Review 1 -->
+        <div class="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-white">SR</div>
+            <div>
+              <div class="text-xs font-bold text-white">Sarah Reynolds</div>
+              <div class="text-[9px] text-slate-500 font-semibold">Lead Developer, StackInc</div>
+            </div>
+          </div>
+          <p class="text-slate-400 text-xs leading-relaxed">"The speed of compiling components using the Gemini 2.5 backend is incredible. Dynamic updates load in seconds!"</p>
+        </div>
+
+        <!-- Review 2 -->
+        <div class="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-white">ML</div>
+            <div>
+              <div class="text-xs font-bold text-white">Marcus Lee</div>
+              <div class="text-[9px] text-slate-500 font-semibold">Founder, BuildFast</div>
+            </div>
+          </div>
+          <p class="text-slate-400 text-xs leading-relaxed">"Client-side ZIP export makes bootstrapping projects an absolute breeze. Zero lag, zero boilerplates, just clean code."</p>
+        </div>
+
+        <!-- Review 3 -->
+        <div class="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-white">TD</div>
+            <div>
+              <div class="text-xs font-bold text-white">Tanya Devry</div>
+              <div class="text-[9px] text-slate-500 font-semibold">AI Consultant</div>
+            </div>
+          </div>
+          <p class="text-slate-400 text-xs leading-relaxed">"The integration of BYOK ensures complete data security. We can input keys directly without worry about leaks."</p>
+        </div>
+      </div>
+    </div>
+  </section>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentFlow SaaS Landing Page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background-color: #020617; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between bg-slate-950">
+  <!-- Navigation Header -->
+  <nav class="border-b border-white/5 bg-slate-950/65 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br ${logoBg} flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/10">A</div>
+        <span class="font-semibold text-white tracking-wide">AgentFlow</span>
+      </div>
+      <div class="flex items-center gap-6 text-sm text-slate-400 font-medium">
+        <a href="#" class="hover:text-white transition-colors">Features</a>
+        <a href="#" class="hover:text-white transition-colors">Pricing</a>
+        <a href="#" class="hover:text-white transition-colors">Docs</a>
+        <button class="${buttonBg} text-white px-4 py-2 rounded-lg text-xs font-semibold transition-all shadow-lg">Get Started</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Content -->
+  <main class="flex-grow max-w-4xl mx-auto px-6 py-24 text-center">
+    <div class="inline-flex items-center gap-2 ${tagBg} ${tagText} text-xs px-3.5 py-1.5 rounded-full mb-8 font-semibold">
+      <span class="w-1.5 h-1.5 rounded-full ${isPurple ? 'bg-purple-400' : 'bg-blue-400'} animate-pulse"></span>
+      AI-Powered Interface Generation
+    </div>
+    <h1 class="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight tracking-tight">
+      Build Professional Frontends<br/>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r ${brandGradient}">
+        Powered by Gemini AI
+      </span>
+    </h1>
+    <p class="text-slate-400 text-sm md:text-base max-w-lg mx-auto mb-10 leading-relaxed font-normal">
+      Describe your dashboard, page, or UI interface, and our AI development agent compiles clean, production-ready React components with Tailwind CSS instantly.
+    </p>
+    <div class="flex items-center gap-4 justify-center">
+      <button class="${buttonBg} text-white px-6 py-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] shadow-lg">Launch Agent</button>
+      <button class="border border-white/10 hover:bg-white/5 text-white px-6 py-2.5 rounded-xl text-xs font-semibold transition-all">Learn More</button>
+    </div>
+  </main>
+
+  <!-- Pricing -->
+  ${pricingSection}
+
+  <!-- Testimonials -->
+  ${testimonialsSection}
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 bg-slate-950 py-8">
+    <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between text-slate-500 text-[11px] gap-4">
+      <span>&copy; ${new Date().getFullYear()} AgentFlow Inc. All rights reserved.</span>
+      <div class="flex gap-6 font-semibold">
+        <a href="#" class="hover:text-slate-300 transition-colors">Privacy</a>
+        <a href="#" class="hover:text-slate-300 transition-colors">Terms</a>
+        <a href="#" class="hover:text-slate-300 transition-colors">Contact Support</a>
       </div>
     </div>
   </footer>
 </body>
 </html>`;
+};
 
-const INITIAL_MESSAGES = [
-  {
-    id: 1,
-    role: 'assistant',
-    content: "Hello! I'm your Website Design Development Agent. I can help you build beautiful, production-ready web interfaces using React and Tailwind CSS.\n\nDescribe what you want to build — a landing page, dashboard, portfolio, e-commerce site — and I'll generate the code in real time. You'll see the result live in the preview panel.",
-    timestamp: new Date(Date.now() - 120000),
-  },
-  {
-    id: 2,
-    role: 'user',
-    content: 'Build me a modern SaaS landing page with a hero section, feature cards, and a pricing section.',
-    timestamp: new Date(Date.now() - 90000),
-  },
-  {
-    id: 3,
-    role: 'assistant',
-    content: "I've generated a modern SaaS landing page for you! Here's what I built:\n\n**Structure:**\n- ✅ Navigation bar with logo and CTA\n- ✅ Hero section with gradient headline\n- ✅ 3-column feature cards\n- ✅ Responsive footer\n\n**Tech used:** React + Tailwind CSS with glassmorphism effects and smooth hover states.\n\nYou can see the live preview on the right. Want me to add a pricing section, testimonials, or adjust the color scheme?",
-    timestamp: new Date(Date.now() - 60000),
-    isCode: false,
-  },
-];
-
-const SUGGESTIONS = [
-  "Add a pricing table with 3 tiers",
-  "Change color scheme to purple gradient",
-  "Add a testimonials section",
-  "Create a dashboard layout",
-  "Build a contact form",
-  "Add dark/light mode toggle",
+// Initial state logs definitions
+const INITIAL_LOGS = [
+  { id: 1, type: 'info', msg: 'Starting local development pipeline...', timestamp: Date.now() - 3000 },
+  { id: 2, type: 'info', msg: 'Loading Dyad config settings...', timestamp: Date.now() - 2500 },
+  { id: 3, type: 'success', msg: '✓ Connected to Local Dyad Orchestrator Client on port 8080', timestamp: Date.now() - 2400 },
+  { id: 4, type: 'success', msg: '✓ Gemini BYOK Key authorized (VITE_GEMINI_API_KEY environment variable detected)', timestamp: Date.now() - 2000 },
+  { id: 5, type: 'info', msg: 'Vite v6.0.0 dev server active at http://localhost:5173/', timestamp: Date.now() - 1500 },
+  { id: 6, type: 'success', msg: '✓ Compiled Tailwind CSS v4.0.0 and React 19 templates dynamically (284ms)', timestamp: Date.now() - 1200 },
+  { id: 7, type: 'info', msg: 'Hot Module Replacement (HMR) pipeline connected and listening...', timestamp: Date.now() - 1000 },
 ];
 
 export default function App() {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
-  const [inputValue, setInputValue] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [files, setFiles] = useState(INITIAL_FILES);
+  // Config state (read VITE_GEMINI_API_KEY from environment)
+  const [config, setConfig] = useState({
+    apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
+    dyadPort: '8080',
+    model: 'gemini-2.5-flash',
+    dyadStatus: 'connected'
+  });
+
   const [activeTab, setActiveTab] = useState('preview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedFolders, setExpandedFolders] = useState({ 3: true });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Chat message feed
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      role: 'assistant',
+      content: "Hello Jaithra! I'm your Website Design Development Agent. I am connected locally via Dyad. I can generate production-grade React interfaces with Tailwind CSS.\n\nType your instructions in chat, or use one of the quick suggestions to modify this landing page workspace.",
+      timestamp: new Date(Date.now() - 180000)
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+
+  // Generation status tracking
+  const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Ready');
-  const [previewHtml, setPreviewHtml] = useState(PREVIEW_HTML);
+  const [projectState, setProjectState] = useState('initial'); // 'initial' | 'pricing' | 'purple' | 'testimonials' | 'dashboard'
+  const [theme, setTheme] = useState('blue'); // 'blue' | 'purple'
 
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
-  const progressIntervalRef = useRef(null);
+  // Logs stream state
+  const [logs, setLogs] = useState(INITIAL_LOGS);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Deploy simulation
+  const [isDeploying, setIsDeploying] = useState(false);
 
-  const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Virtual Files System tree state
+  const [files, setFiles] = useState([]);
+  const [activeFile, setActiveFile] = useState(null);
+  const [expandedFolders, setExpandedFolders] = useState({ 3: true, 7: true });
+
+  const addLog = (type, msg) => {
+    setLogs(prev => [
+      ...prev,
+      { id: prev.length + 1, type, msg, timestamp: Date.now() }
+    ]);
   };
+
+  // Sync virtual files contents based on prompt modifications
+  const updateVirtualFiles = (stateName, activeTheme) => {
+    const isPurpleTheme = activeTheme === 'purple';
+    
+    // Pricing component code
+    const pricingCode = `import React from 'react';
+
+export default function Pricing() {
+  return (
+    <section className="py-20 border-t border-white/5 bg-slate-900/30">
+      <div className="max-w-5xl mx-auto px-6 text-center">
+        <h2 className="text-3xl font-bold text-white mb-4">Flexible Pricing Tiers</h2>
+        <p className="text-slate-400 max-w-md mx-auto mb-16 text-sm">
+          Unlock the full power of AI generation workflows with transparent configurations.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-slate-950 border border-white/5 p-8 rounded-2xl text-left">
+            <h3 className="font-semibold text-lg text-white">Starter</h3>
+            <div className="text-2xl font-bold mt-4 text-white">Free</div>
+            <button className="w-full mt-8 py-2.5 border border-white/10 hover:bg-white/5 text-white rounded-xl text-xs font-semibold">
+              Get Started
+            </button>
+          </div>
+          <div className="bg-slate-950 border-2 border-${isPurpleTheme ? 'purple' : 'blue'}-500/40 p-8 rounded-2xl text-left relative shadow-xl">
+            <h3 className="font-semibold text-lg text-white">Professional</h3>
+            <div className="text-2xl font-bold mt-4 text-white">$29/mo</div>
+            <button className="w-full mt-8 py-2.5 bg-${isPurpleTheme ? 'purple' : 'blue'}-600 hover:bg-${isPurpleTheme ? 'purple' : 'blue'}-500 text-white rounded-xl text-xs font-semibold">
+              Upgrade Now
+            </button>
+          </div>
+          <div className="bg-slate-950 border border-white/5 p-8 rounded-2xl text-left">
+            <h3 className="font-semibold text-lg text-white">Enterprise</h3>
+            <div className="text-2xl font-bold mt-4">Custom</div>
+            <button className="w-full mt-8 py-2.5 border border-white/10 hover:bg-white/5 text-white rounded-xl text-xs font-semibold">
+              Talk to Sales
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}`;
+
+    // Testimonials component code
+    const testimonialsCode = `import React from 'react';
+
+export default function Testimonials() {
+  return (
+    <section className="py-20 border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-6 text-center">
+        <h2 className="text-3xl font-bold text-white mb-4">Loved by AI Engineers</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
+          <div className="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
+            <div className="text-xs font-bold text-white mb-2">Sarah Reynolds</div>
+            <p className="text-slate-400 text-xs">"The speed of compiling components is incredible!"</p>
+          </div>
+          <div className="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
+            <div className="text-xs font-bold text-white mb-2">Marcus Lee</div>
+            <p className="text-slate-400 text-xs">"Client-side ZIP export makes bootstrapping project simple."</p>
+          </div>
+          <div className="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
+            <div className="text-xs font-bold text-white mb-2">Tanya Devry</div>
+            <p className="text-slate-400 text-xs">"Dynamic updates load in seconds."</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}`;
+
+    // Generate specific CSS variables based on active theme
+    const activeCss = `@import "tailwindcss";
+
+:root {
+  --primary: ${isPurpleTheme ? '#7c3aed' : '#2563eb'};
+  --primary-glow: ${isPurpleTheme ? 'rgba(124, 58, 237, 0.15)' : 'rgba(37, 99, 235, 0.15)'};
+}
+
+body {
+  background-color: #020617;
+  color: #f8fafc;
+}
+`;
+
+    // Hero Component (styled according to active theme)
+    const activeHero = `import React from 'react';
+
+export default function Hero() {
+  return (
+    <main className="flex-grow max-w-4xl mx-auto px-6 py-24 text-center">
+      <div className="inline-flex items-center gap-2 bg-${isPurpleTheme ? 'purple' : 'blue'}-500/10 border border-${isPurpleTheme ? 'purple' : 'blue'}-500/20 text-${isPurpleTheme ? 'purple' : 'blue'}-400 text-xs px-3.5 py-1.5 rounded-full mb-8 font-medium">
+        <span className="w-1.5 h-1.5 rounded-full bg-${isPurpleTheme ? 'purple' : 'blue'}-400 animate-pulse"></span>
+        AI-Powered Interface Generation
+      </div>
+      <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight tracking-tight">
+        Build Professional Frontends<br/>
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-${isPurpleTheme ? 'purple' : 'blue'}-400 via-indigo-400 to-${isPurpleTheme ? 'pink' : 'purple'}-400">
+          Powered by Gemini AI
+        </span>
+      </h1>
+      <p className="text-slate-400 text-base max-w-xl mx-auto mb-10 leading-relaxed font-normal">
+        Describe your dashboard, page, or UI interface, and our AI development agent compiles clean, production-ready React components with Tailwind CSS instantly.
+      </p>
+      <div className="flex items-center gap-4 justify-center">
+        <button className="bg-${isPurpleTheme ? 'purple' : 'blue'}-600 hover:bg-${isPurpleTheme ? 'purple' : 'blue'}-500 text-white px-7 py-3 rounded-xl font-medium transition-all shadow-lg">
+          Launch Agent
+        </button>
+      </div>
+    </main>
+  );
+}`;
+
+    // App Component imports and layouts
+    let appImports = `import React from 'react';\nimport Header from './components/Header';\nimport Hero from './components/Hero';`;
+    let appRenders = `<Header />\n      <Hero />`;
+
+    const folderChildren = [
+      { id: 4, name: 'Header.jsx', type: 'jsx', content: INITIAL_HEADER },
+      { id: 5, name: 'Hero.jsx', type: 'jsx', content: activeHero }
+    ];
+
+    if (stateName === 'pricing' || stateName === 'pricing_purple' || stateName === 'pricing_testimonials') {
+      appImports += `\nimport Pricing from './components/Pricing';`;
+      appRenders += `\n      <Pricing />`;
+      folderChildren.push({ id: 12, name: 'Pricing.jsx', type: 'jsx', content: pricingCode });
+    }
+
+    if (stateName === 'testimonials' || stateName === 'pricing_testimonials') {
+      appImports += `\nimport Testimonials from './components/Testimonials';`;
+      appRenders += `\n      <Testimonials />`;
+      folderChildren.push({ id: 13, name: 'Testimonials.jsx', type: 'jsx', content: testimonialsCode });
+    }
+
+    appImports += `\nimport Footer from './components/Footer';`;
+    appRenders += `\n      <Footer />`;
+
+    const activeApp = `${appImports}\n\nexport default function App() {\n  return (\n    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between">\n      ${appRenders}\n    </div>\n  );\n}`;
+
+    const adminDashboardCode = `import React from 'react';
+import Sidebar from './components/Sidebar';
+import MainDashboard from './components/MainDashboard';
+
+export default function App() {
+  return (
+    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+      <Sidebar />
+      <MainDashboard />
+    </div>
+  );
+}`;
+
+    let appFileContent = activeApp;
+    if (stateName === 'dashboard') {
+      appFileContent = adminDashboardCode;
+      folderChildren.push({ id: 14, name: 'Sidebar.jsx', type: 'jsx', content: `// Dashboard Sidebar Component Code` });
+      folderChildren.push({ id: 15, name: 'MainDashboard.jsx', type: 'jsx', content: `// Dashboard Main Content Panel Code` });
+    }
+
+    const newFilesTree = [
+      { id: 1, name: 'index.html', type: 'html', content: INITIAL_HTML },
+      { id: 2, name: 'App.jsx', type: 'jsx', content: appFileContent },
+      { 
+        id: 3, 
+        name: 'components/', 
+        type: 'folder', 
+        children: folderChildren
+      },
+      { 
+        id: 7, 
+        name: 'styles/', 
+        type: 'folder', 
+        children: [
+          { id: 8, name: 'index.css', type: 'css', content: activeCss }
+        ]
+      },
+      { id: 10, name: 'package.json', type: 'json', content: INITIAL_PACKAGE },
+      { id: 11, name: 'vite.config.js', type: 'js', content: INITIAL_VITE }
+    ];
+
+    setFiles(newFilesTree);
+    
+    // Maintain active file binding
+    if (activeFile) {
+      const findActiveFile = (list) => {
+        for (const f of list) {
+          if (f.id === activeFile.id) return f;
+          if (f.children) {
+            const found = findActiveFile(f.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const synced = findActiveFile(newFilesTree);
+      if (synced) setActiveFile(synced);
+    } else {
+      setActiveFile(newFilesTree[1]); // Default select App.jsx
+    }
+  };
+
+  // Run on mount to seed virtual files
+  useEffect(() => {
+    updateVirtualFiles(projectState, theme);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleFolder = (id) => {
     setExpandedFolders(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const simulateGeneration = (userMessage) => {
+  // Compile Pipeline Simulator
+  const triggerHmrBuild = (targetState, targetTheme) => {
     setIsGenerating(true);
     setGenerationProgress(0);
-    setStatusMessage('Analyzing prompt...');
+    setStatusMessage('Analyzing workspace instructions...');
+    addLog('info', 'Executing compilation pipeline trigger...');
 
     const stages = [
-      { progress: 15, status: 'Analyzing prompt...', delay: 400 },
-      { progress: 35, status: 'Designing layout...', delay: 800 },
-      { progress: 55, status: 'Generating components...', delay: 700 },
-      { progress: 75, status: 'Applying Tailwind styles...', delay: 600 },
-      { progress: 90, status: 'Optimizing output...', delay: 500 },
-      { progress: 100, status: 'Complete!', delay: 400 },
+      { progress: 20, status: 'Gemini generating updated React/JSX components...', delay: 500, log: 'Gemini GenAI completed component routing.' },
+      { progress: 50, status: 'Validating environment variables & safety keys...', delay: 800, log: 'Environment security checks: Clean' },
+      { progress: 75, status: 'Recompiling Tailwind CSS styles...', delay: 650, log: 'Tailwind HMR build completed.' },
+      { progress: 90, status: 'Vite bundler packaging dev assets...', delay: 500, log: 'Vite compiled assets.' },
+      { progress: 100, status: 'Syncing live viewport preview frame...', delay: 400, log: '✓ Hot Module Replacement (HMR) complete' }
     ];
 
     let currentStage = 0;
     const runStage = () => {
       if (currentStage >= stages.length) {
         setIsGenerating(false);
-        setStatusMessage('Ready');
         setGenerationProgress(0);
-
-        const responseContent = generateResponse(userMessage);
-        setMessages(prev => [...prev, {
-          id: prev.length + 1,
-          role: 'assistant',
-          content: responseContent,
-          timestamp: new Date(),
-        }]);
+        setStatusMessage('Ready');
+        
+        // Push final update
+        setProjectState(targetState);
+        setTheme(targetTheme);
+        updateVirtualFiles(targetState, targetTheme);
+        
+        addLog('success', '✓ Compiled and refreshed live development runner successfully');
         return;
       }
+
       const stage = stages[currentStage];
       setGenerationProgress(stage.progress);
       setStatusMessage(stage.status);
+      addLog('info', stage.log);
       currentStage++;
       setTimeout(runStage, stage.delay);
     };
-    setTimeout(runStage, 100);
+
+    setTimeout(runStage, 200);
   };
 
-  const generateResponse = (prompt) => {
-    const lower = prompt.toLowerCase();
-    if (lower.includes('pric')) {
-      return "I've added a 3-tier pricing section below the features!\n\n**Added:**\n- ✅ Starter — Free plan\n- ✅ Pro — $29/month with highlighted badge\n- ✅ Enterprise — Custom pricing\n\nEach card includes feature lists, a CTA button, and a popular badge on the Pro tier. The layout uses a responsive 3-column grid with hover effects.";
-    }
-    if (lower.includes('purple') || lower.includes('color')) {
-      return "Color scheme updated to purple gradient!\n\n**Changed:**\n- ✅ Primary brand color: Violet-600\n- ✅ CTA buttons updated\n- ✅ Hero gradient re-styled\n- ✅ Accent highlights updated\n\nThe design now uses a purple-to-indigo gradient palette throughout the page.";
-    }
-    if (lower.includes('testimonial')) {
-      return "Testimonials section added!\n\n**Structure:**\n- ✅ Section header with subheadline\n- ✅ 3 testimonial cards with avatars\n- ✅ 5-star ratings with names and roles\n- ✅ Quote marks using CSS pseudoelements\n\nAll testimonials use realistic placeholder names and compelling copy.";
-    }
-    if (lower.includes('dashboard')) {
-      return "Dashboard layout generated!\n\n**Components:**\n- ✅ Sidebar with nav links and icons\n- ✅ Stats cards with trend indicators\n- ✅ Area chart placeholder\n- ✅ Recent activity feed\n- ✅ Quick action buttons\n\nThe layout uses a fixed sidebar with a scrollable main content area.";
-    }
-    return `Got it! I'm working on: "${prompt}"\n\n**Generated:**\n- ✅ Component structure created\n- ✅ Responsive layout applied\n- ✅ Tailwind classes optimized\n- ✅ Animations and hover states added\n\nCheck the preview panel to see the result. Want me to adjust anything?`;
-  };
-
-  const handleSend = () => {
-    if (!inputValue.trim() || isGenerating) return;
+  const handleSendPrompt = (promptText = inputValue) => {
+    if (!promptText.trim() || isGenerating) return;
+    
+    // Add user message
     const userMsg = {
       id: messages.length + 1,
       role: 'user',
-      content: inputValue.trim(),
-      timestamp: new Date(),
+      content: promptText.trim(),
+      timestamp: new Date()
     };
+    
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
-    simulateGeneration(userMsg.content);
+
+    // Determine target updates
+    const lower = promptText.toLowerCase();
+    let targetState = projectState;
+    let targetTheme = theme;
+    let assistantReply = '';
+
+    if (lower.includes('pric')) {
+      if (theme === 'purple') {
+        targetState = 'pricing_purple';
+        assistantReply = "I've added a premium 3-tier pricing section utilizing purple gradients to match the active brand aesthetic.\n\n**Modifications:**\n- Added [components/Pricing.jsx]\n- Integrated `<Pricing />` in `App.jsx`\n- Compiled clean hover scaling effects\n\nPreview is updated live.";
+      } else {
+        targetState = 'pricing';
+        assistantReply = "I've added a modern 3-tier pricing table to the SaaS landing page.\n\n**Modifications:**\n- Added [components/Pricing.jsx]\n- Modified `App.jsx` to render `<Pricing />`\n\nView the updated live preview on the right.";
+      }
+    } else if (lower.includes('purple') || lower.includes('color') || lower.includes('theme')) {
+      targetTheme = 'purple';
+      if (projectState === 'pricing') {
+        targetState = 'pricing_purple';
+      } else if (projectState === 'testimonials') {
+        targetState = 'pricing_testimonials'; // Simple compound mapping
+      }
+      assistantReply = "Color scheme and branding accents updated to a sleek, modern Purple gradient.\n\n**Modifications:**\n- Updated index.css root CSS variables to violet hues\n- Refactored brand classes in [components/Hero.jsx]\n- Adjusted progress bar and accents\n\nTailwind has recompiled.";
+    } else if (lower.includes('testimonial')) {
+      if (projectState === 'pricing' || projectState === 'pricing_purple') {
+        targetState = 'pricing_testimonials';
+      } else {
+        targetState = 'testimonials';
+      }
+      assistantReply = "Testimonial cards grid added to the workspace.\n\n**Modifications:**\n- Added [components/Testimonials.jsx]\n- Updates loaded into main viewport\n\nCheck out the layout structures in live preview.";
+    } else if (lower.includes('dashboard') || lower.includes('admin')) {
+      targetState = 'dashboard';
+      assistantReply = "Fully interactive Admin Dashboard view layout generated.\n\n**Modifications:**\n- Overhauled App.jsx with static sidebar and grid blocks\n- Added stats monitors and recent HMR tables\n\nPreview is compiled.";
+    } else {
+      assistantReply = `I've analyzed your prompt: "${promptText}". The components have been validated, files compiled, and active Tailwind CSS hooks updated.\n\nInspect the updated files in the Code panel.`;
+    }
+
+    // Trigger AI response loading
+    setTimeout(() => {
+      triggerHmrBuild(targetState, targetTheme);
+      
+      setMessages(prev => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          role: 'assistant',
+          content: assistantReply,
+          timestamp: new Date()
+        }
+      ]);
+    }, 600);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  // Export full workspace to ZIP using JSZip
+  const handleExportZip = async () => {
+    addLog('info', 'Compiling and packing workspace folders...');
+    const zip = new JSZip();
+
+    // Helper: recursively add virtual files to ZIP folder
+    const addFilesToZip = (items, currentFolder = zip) => {
+      items.forEach(item => {
+        if (item.type === 'folder') {
+          const subFolder = currentFolder.folder(item.name.replace('/', ''));
+          if (item.children) {
+            addFilesToZip(item.children, subFolder);
+          }
+        } else {
+          currentFolder.file(item.name, item.content || '');
+        }
+      });
+    };
+
+    addFilesToZip(files);
+    
+    // Add additional readme and SOW documents to download
+    zip.file('README.md', '# Generated React Workspace\nBuilt by Website Design Development Agent powered by Gemini.');
+
+    try {
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `agentflow-project-${projectState}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      addLog('success', '✓ Workspace exported and downloaded successfully as ZIP archive');
+    } catch (err) {
+      console.error(err);
+      addLog('error', `Failed to generate ZIP bundle: ${err.message}`);
     }
   };
 
-  const renderFileTree = (fileList, depth = 0) => {
-    return fileList.map(file => (
-      <div key={file.id}>
-        <div
-          className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer rounded-md transition-all duration-150 group text-sm ${
-            file.active
-              ? 'bg-blue-600/20 text-blue-300'
-              : 'text-[#8b95a7] hover:text-[#e8eaf0] hover:bg-[#1e2433]'
-          }`}
-          style={{ paddingLeft: `${12 + depth * 14}px` }}
-          onClick={() => file.type === 'folder' && toggleFolder(file.id)}
-        >
-          {file.type === 'folder' ? (
-            <span className="text-[10px] text-[#4b5563] transition-transform duration-200"
-              style={{ transform: expandedFolders[file.id] ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' }}>
-              ▶
-            </span>
-          ) : (
-            <span className="w-3 h-3" />
-          )}
-          <span className="text-xs">{file.type === 'folder' ? '📁' : (FILE_ICONS[file.type]?.icon || '📄')}</span>
-          <span className="text-xs font-medium">{file.name}</span>
-          {file.active && (
-            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-          )}
-        </div>
-        {file.type === 'folder' && expandedFolders[file.id] && file.children && (
-          <div>{renderFileTree(file.children, depth + 1)}</div>
-        )}
-      </div>
-    ));
+  // Simulated Deploy Flow
+  const handleDeploy = () => {
+    setIsDeploying(true);
+    addLog('info', 'Initializing deployment process to cloud environments...');
+    setTimeout(() => {
+      addLog('info', 'Running final code build tests...');
+      setTimeout(() => {
+        addLog('success', '✓ Build checks passed (Zero warnings)');
+        setTimeout(() => {
+          setIsDeploying(false);
+          addLog('success', '✓ Application deployed live at https://agentflow-dev.web.app/');
+          alert('Project deployed successfully to https://agentflow-dev.web.app/ (Simulated)');
+        }, 1000);
+      }, 800);
+    }, 600);
   };
 
   return (
     <div className="flex flex-col h-screen bg-[#0a0b0e] text-[#e8eaf0] overflow-hidden">
-      {/* Top Header */}
-      <header className="flex items-center justify-between px-4 py-2.5 border-b border-[#1e2733] bg-[#0f1117] flex-shrink-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold shadow-lg">
-              W
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-[#e8eaf0]">Website Design</span>
-              <span className="text-sm font-semibold text-[#3b82f6]"> Agent</span>
-            </div>
-          </div>
-          <div className="h-4 w-px bg-[#1e2733]" />
-          <div className="flex items-center gap-1.5 text-xs text-[#10b981]">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" style={{ animation: 'pulse-dot 2s infinite' }} />
-            <span>Gemini 2.5 Flash</span>
-          </div>
-        </div>
+      {/* Header navbar */}
+      <Header
+        isGenerating={isGenerating}
+        statusMessage={statusMessage}
+        generationProgress={generationProgress}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        config={config}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onExport={handleExportZip}
+        onDeploy={handleDeploy}
+        isDeploying={isDeploying}
+      />
 
-        {/* Generation Progress Bar */}
-        {isGenerating && (
-          <div className="flex-1 mx-8 max-w-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-3 h-3 rounded-full border-2 border-blue-400 border-t-transparent spinner" />
-              <span className="text-xs text-[#8b95a7]">{statusMessage}</span>
-              <span className="text-xs text-blue-400 ml-auto">{generationProgress}%</span>
-            </div>
-            <div className="h-1 bg-[#1e2733] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500"
-                style={{ width: `${generationProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <button
-            id="sidebar-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={`p-1.5 rounded-md text-xs transition-colors ${sidebarOpen ? 'bg-[#1e2433] text-[#e8eaf0]' : 'text-[#4b5563] hover:text-[#8b95a7]'}`}
-            title="Toggle Sidebar"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect x="1" y="3" width="12" height="1.5" rx="0.75" fill="currentColor"/>
-              <rect x="1" y="6.25" width="8" height="1.5" rx="0.75" fill="currentColor"/>
-              <rect x="1" y="9.5" width="10" height="1.5" rx="0.75" fill="currentColor"/>
-            </svg>
-          </button>
-          <button className="px-3 py-1.5 text-xs bg-[#1e2433] hover:bg-[#2a3347] text-[#8b95a7] hover:text-[#e8eaf0] rounded-md transition-colors border border-[#1e2733]">
-            Export
-          </button>
-          <button
-            id="deploy-btn"
-            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-all hover:shadow-lg hover:shadow-blue-500/25 font-medium"
-          >
-            Deploy
-          </button>
-        </div>
-      </header>
-
-      {/* Main Layout */}
+      {/* Main Panel Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar explorer */}
         {sidebarOpen && (
-          <aside className="w-56 flex-shrink-0 border-r border-[#1e2733] bg-[#0f1117] flex flex-col slide-in-left">
-            <div className="px-3 py-3 border-b border-[#1e2733] flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#4b5563] uppercase tracking-wider">Explorer</span>
-              <button className="text-[#4b5563] hover:text-[#8b95a7] transition-colors text-xs">
-                +
-              </button>
-            </div>
-
-            {/* Project label */}
-            <div className="px-3 py-2 flex items-center gap-1.5">
-              <span className="text-[10px] text-[#4b5563] uppercase tracking-wider">website-design-agent</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-1">
-              {renderFileTree(files)}
-            </div>
-
-            {/* Bottom status */}
-            <div className="px-3 py-3 border-t border-[#1e2733]">
-              <div className="flex items-center gap-2 text-xs text-[#4b5563]">
-                <span>⚡</span>
-                <span>Vite + React + Tailwind</span>
-              </div>
-            </div>
-          </aside>
+          <Sidebar
+            files={files}
+            activeFile={activeFile}
+            onSelectFile={setActiveFile}
+            expandedFolders={expandedFolders}
+            onToggleFolder={toggleFolder}
+          />
         )}
 
-        {/* Chat Panel */}
-        <div className="w-[400px] flex-shrink-0 flex flex-col border-r border-[#1e2733] bg-[#0a0b0e]">
-          {/* Chat Header */}
-          <div className="px-4 py-3 border-b border-[#1e2733] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-[9px]">AI</span>
-              </div>
-              <span className="text-sm font-medium">Chat</span>
-            </div>
-            <span className="text-xs text-[#4b5563]">{messages.length} messages</span>
-          </div>
+        {/* Chat window */}
+        <ChatPanel
+          messages={messages}
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          onSend={handleSendPrompt}
+          isGenerating={isGenerating}
+          suggestions={[
+            'Add a pricing table',
+            'Change color scheme to purple gradient',
+            'Add a testimonials section',
+            'Create a dashboard layout'
+          ]}
+          onSelectSuggestion={handleSendPrompt}
+          config={config}
+        />
 
-          {/* Messages */}
-          <div id="chat-messages" className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {messages.map((msg, index) => (
-              <div
-                key={msg.id}
-                className={`fade-in ${msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'}`}
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-2' : 'order-1'}`}>
-                  {msg.role === 'assistant' && (
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-[7px] font-bold">W</span>
-                      </div>
-                      <span className="text-[11px] text-[#4b5563]">Agent · {formatTime(msg.timestamp)}</span>
-                    </div>
-                  )}
-                  <div
-                    className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                      msg.role === 'user'
-                        ? 'bg-blue-600 text-white rounded-tr-sm'
-                        : 'bg-[#161b27] text-[#c8ccd6] border border-[#1e2733] rounded-tl-sm'
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                  {msg.role === 'user' && (
-                    <div className="flex justify-end mt-1">
-                      <span className="text-[11px] text-[#4b5563]">{formatTime(msg.timestamp)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Typing indicator */}
-            {isGenerating && (
-              <div className="flex justify-start fade-in">
-                <div className="max-w-[85%]">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      <span className="text-[7px] font-bold">W</span>
-                    </div>
-                    <span className="text-[11px] text-[#4b5563]">Agent · generating...</span>
-                  </div>
-                  <div className="px-3.5 py-3 rounded-2xl rounded-tl-sm bg-[#161b27] border border-[#1e2733] flex items-center gap-1.5">
-                    {[0, 0.2, 0.4].map((delay, i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-blue-400"
-                        style={{ animation: `pulse-dot 1.2s ${delay}s infinite` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Suggestions */}
-          {!isGenerating && (
-            <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
-              {SUGGESTIONS.slice(0, 3).map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => setInputValue(s)}
-                  className="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-[#161b27] border border-[#1e2733] text-[#8b95a7] hover:text-[#e8eaf0] hover:border-[#2563eb]/40 transition-all whitespace-nowrap"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Input Area */}
-          <div className="px-4 pb-4 pt-2">
-            <div className="relative flex items-end gap-2 bg-[#161b27] border border-[#1e2733] rounded-xl overflow-hidden focus-within:border-[#2563eb]/50 transition-colors">
-              <textarea
-                id="chat-input"
-                ref={inputRef}
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Describe what to build..."
-                disabled={isGenerating}
-                rows={1}
-                className="flex-1 px-3.5 py-3 bg-transparent text-sm text-[#e8eaf0] placeholder-[#4b5563] outline-none resize-none leading-relaxed"
-                style={{ maxHeight: '120px' }}
-              />
-              <button
-                id="send-btn"
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isGenerating}
-                className={`m-2 p-2 rounded-lg transition-all ${
-                  inputValue.trim() && !isGenerating
-                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'
-                    : 'bg-[#1e2433] text-[#4b5563] cursor-not-allowed'
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M12 7L2 2L4.5 7L2 12L12 7Z" fill="currentColor"/>
-                </svg>
-              </button>
-            </div>
-            <div className="flex items-center justify-between mt-1.5">
-              <span className="text-[10px] text-[#4b5563]">↵ Send · ⇧↵ New line</span>
-              <span className="text-[10px] text-[#4b5563]">Gemini 2.5 Flash</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Preview Panel */}
-        <div className="flex-1 flex flex-col bg-[#0a0b0e] min-w-0">
-          {/* Preview Tabs */}
-          <div className="flex items-center px-4 border-b border-[#1e2733] bg-[#0f1117] flex-shrink-0">
-            <div className="flex items-center gap-1 py-2">
-              {['preview', 'code', 'console'].map(tab => (
-                <button
-                  key={tab}
-                  id={`tab-${tab}`}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 text-xs rounded-md capitalize transition-all ${
-                    activeTab === tab
-                      ? 'bg-[#1e2433] text-[#e8eaf0] font-medium'
-                      : 'text-[#4b5563] hover:text-[#8b95a7]'
-                  }`}
-                >
-                  {tab === 'preview' && '👁 '}
-                  {tab === 'code' && '< '}
-                  {tab === 'console' && '⬛ '}
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              {/* Fake URL bar */}
-              <div className="flex items-center gap-1.5 bg-[#161b27] border border-[#1e2733] rounded-md px-2.5 py-1 text-xs text-[#4b5563]">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                <span>localhost:5173</span>
-              </div>
-              <button className="p-1.5 text-[#4b5563] hover:text-[#8b95a7] transition-colors rounded-md hover:bg-[#1e2433]" title="Refresh">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M10 6A4 4 0 1 1 6 2M6 2L8 4M6 2L4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <button className="p-1.5 text-[#4b5563] hover:text-[#8b95a7] transition-colors rounded-md hover:bg-[#1e2433]" title="Open in new tab">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M5 2H2v8h8V7M7 1h4v4M10 2L6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Preview Content */}
-          <div className="flex-1 overflow-hidden relative">
-            {activeTab === 'preview' && (
-              <div className="h-full">
-                {isGenerating && (
-                  <div className="absolute inset-0 bg-[#0a0b0e]/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-10 h-10 rounded-full border-2 border-blue-400 border-t-transparent spinner" />
-                      <span className="text-sm text-[#8b95a7]">{statusMessage}</span>
-                    </div>
-                  </div>
-                )}
-                <iframe
-                  id="preview-iframe"
-                  srcDoc={previewHtml}
-                  title="Live Preview"
-                  className="w-full h-full border-0"
-                  sandbox="allow-scripts"
-                />
-              </div>
-            )}
-
-            {activeTab === 'code' && (
-              <div className="h-full overflow-auto p-4 font-mono text-xs bg-[#0f1117]">
-                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-[#1e2733]">
-                  <span className="text-[#4b5563]">App.jsx</span>
-                  <button className="ml-auto text-[11px] text-[#4b5563] hover:text-[#8b95a7] px-2 py-0.5 rounded border border-[#1e2733] transition-colors">
-                    Copy
-                  </button>
-                </div>
-                <pre className="text-[#c8ccd6] leading-relaxed whitespace-pre-wrap text-[11px]">{`import React from 'react';
-
-// Website Design Agent - Generated Component
-export default function LandingPage() {
-  return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Navigation */}
-      <nav className="border-b border-white/10 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 py-4
-          flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br
-              from-blue-500 to-purple-600" />
-            <span className="font-semibold">AgentFlow</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
-            <button className="bg-blue-600 hover:bg-blue-500 px-4
-              py-2 rounded-lg transition-colors">
-              Get Started
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <main className="max-w-6xl mx-auto px-6 py-20 text-center">
-        <h1 className="text-5xl font-bold mb-6">
-          Build Websites with{' '}
-          <span className="text-transparent bg-clip-text
-            bg-gradient-to-r from-blue-400 to-purple-400">
-            AI Intelligence
-          </span>
-        </h1>
-        <p className="text-white/60 text-lg max-w-2xl mx-auto mb-10">
-          Describe your vision, and our AI generates
-          production-ready code instantly.
-        </p>
-        <button className="bg-blue-600 hover:bg-blue-500 px-8 py-3
-          rounded-xl font-medium transition-all hover:scale-105">
-          Start Building Free
-        </button>
-      </main>
-    </div>
-  );
-}`}</pre>
-              </div>
-            )}
-
-            {activeTab === 'console' && (
-              <div className="h-full overflow-auto p-4 font-mono text-xs bg-[#0a0b0e]">
-                <div className="space-y-1.5">
-                  {[
-                    { type: 'info', msg: 'Vite dev server running at http://localhost:5173' },
-                    { type: 'success', msg: '✓ React 19.2.7 loaded successfully' },
-                    { type: 'success', msg: '✓ Tailwind CSS v4 compiled — 142ms' },
-                    { type: 'info', msg: 'Hot Module Replacement (HMR) enabled' },
-                    { type: 'info', msg: 'Gemini API connection established' },
-                    { type: 'success', msg: '✓ Website Design Agent ready' },
-                  ].map((log, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className={`text-[10px] mt-0.5 ${
-                        log.type === 'success' ? 'text-[#10b981]'
-                        : log.type === 'error' ? 'text-[#ef4444]'
-                        : log.type === 'warn' ? 'text-[#f59e0b]'
-                        : 'text-[#4b5563]'
-                      }`}>
-                        {log.type === 'success' ? '●' : log.type === 'error' ? '✕' : '○'}
-                      </span>
-                      <span className={`${
-                        log.type === 'success' ? 'text-[#10b981]'
-                        : log.type === 'error' ? 'text-[#ef4444]'
-                        : 'text-[#8b95a7]'
-                      }`}>{log.msg}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom status bar */}
-          <div className="flex items-center justify-between px-4 py-1.5 border-t border-[#1e2733] bg-[#0f1117] text-[10px] text-[#4b5563]">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${isGenerating ? 'bg-amber-400' : 'bg-[#10b981]'}`} />
-                <span>{isGenerating ? statusMessage : 'Ready'}</span>
-              </div>
-              <span>·</span>
-              <span>React 19 · Tailwind v4 · Vite 8</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span>UTF-8</span>
-              <span>·</span>
-              <span>Spaces: 2</span>
-              <span>·</span>
-              <span>JSX</span>
-            </div>
-          </div>
-        </div>
+        {/* Live Preview Panel */}
+        <PreviewPanel
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isGenerating={isGenerating}
+          statusMessage={statusMessage}
+          previewHtml={getPreviewHtml(projectState, theme)}
+          selectedFile={activeFile}
+          logs={logs}
+          onClearLogs={() => setLogs([])}
+          onRefreshPreview={() => triggerHmrBuild(projectState, theme)}
+        />
       </div>
+
+      {/* Settings Dialog Modal */}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        config={config}
+        onSave={(updatedConfig) => {
+          setConfig(updatedConfig);
+          addLog('success', `✓ Saved BYOK configuration settings (Active Model: ${updatedConfig.model})`);
+        }}
+      />
     </div>
   );
 }
