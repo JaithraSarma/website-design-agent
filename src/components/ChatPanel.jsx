@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Send, Sparkles, MessageSquare } from 'lucide-react';
+import { Send, Sparkles, MessageSquare, Maximize2, Minimize2 } from 'lucide-react';
 
 export default function ChatPanel({ 
   messages, 
@@ -8,7 +8,9 @@ export default function ChatPanel({
   onSend, 
   isGenerating, 
   suggestions, 
-  onSelectSuggestion
+  onSelectSuggestion,
+  onMaximize,
+  isMaximized
 }) {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -38,22 +40,31 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="w-[400px] flex-shrink-0 flex flex-col border-r border-[#1e2733] bg-[#0a0b0e] h-full">
+    <div className="w-full h-full flex flex-col bg-[#09090b] border-r border-[#27272a]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#1e2733] bg-[#0f1117]/50 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-[#27272a] bg-[#09090b] flex items-center justify-between select-none">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
+          <div className="w-5 h-5 rounded bg-[#18181b] border border-[#27272a] flex items-center justify-center">
             <Sparkles className="w-2.5 h-2.5 text-white" />
           </div>
-          <span className="text-xs font-semibold text-[#e8eaf0]">Orchestration Chat</span>
+          <span className="text-xs font-semibold text-[#f4f4f5]">Orchestration Chat</span>
         </div>
-        <span className="text-[10px] text-[#4b5563] bg-[#161b27] px-2 py-0.5 rounded-full border border-[#1e2733] font-medium">
-          {messages.length} Messages
-        </span>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={onMaximize}
+            className="p-1 rounded text-[#52525b] hover:text-[#f4f4f5] hover:bg-[#18181b] transition-all cursor-pointer"
+            title={isMaximized ? "Restore Layout" : "Maximize Chat"}
+          >
+            {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
+          <span className="text-[9px] text-[#52525b] bg-[#18181b] px-2 py-0.5 rounded border border-[#27272a] font-bold uppercase tracking-wider">
+            {messages.length} Messages
+          </span>
+        </div>
       </div>
 
       {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 custom-scrollbar bg-[#000000]">
         {messages.map((msg, index) => {
           const isUser = msg.role === 'user';
           return (
@@ -64,14 +75,14 @@ export default function ChatPanel({
             >
               {/* Agent Avatar */}
               {!isUser && (
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                <div className="w-6 h-6 rounded bg-[#18181b] border border-[#27272a] flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-3.5 h-3.5 text-white" />
                 </div>
               )}
 
               <div className={`max-w-[80%] ${isUser ? 'order-1' : 'order-2'}`}>
                 {/* Header detail */}
-                <div className={`flex items-center gap-1.5 mb-1 text-[10px] text-[#4b5563] font-medium ${isUser ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex items-center gap-1.5 mb-1 text-[10px] text-[#52525b] font-medium ${isUser ? 'justify-end' : 'justify-start'}`}>
                   <span>{isUser ? 'You' : 'Agent'}</span>
                   <span>·</span>
                   <span>{formatTime(msg.timestamp)}</span>
@@ -81,8 +92,8 @@ export default function ChatPanel({
                 <div
                   className={`px-3.5 py-2.5 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
                     isUser
-                      ? 'bg-blue-600 text-white rounded-tr-none font-medium'
-                      : 'bg-[#161b27] text-[#c8ccd6] border border-[#1e2733] rounded-tl-none font-medium'
+                      ? 'bg-white text-black rounded-tr-none font-semibold shadow-sm'
+                      : 'bg-[#18181b] text-[#e4e4e7] border border-[#27272a] rounded-tl-none font-medium'
                   }`}
                 >
                   {msg.content}
@@ -95,20 +106,20 @@ export default function ChatPanel({
         {/* Streaming Loader / Typing Dots */}
         {isGenerating && (
           <div className="flex gap-2.5 justify-start fade-in">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-6 h-6 rounded bg-[#18181b] border border-[#27272a] flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5 mb-1 text-[10px] text-[#4b5563] font-medium">
+              <div className="flex items-center gap-1.5 mb-1 text-[10px] text-[#52525b] font-medium">
                 <span>Agent</span>
                 <span>·</span>
                 <span>Compiling...</span>
               </div>
-              <div className="px-3.5 py-3 rounded-xl rounded-tl-none bg-[#161b27] border border-[#1e2733] flex items-center gap-1.5">
+              <div className="px-3.5 py-3 rounded-xl rounded-tl-none bg-[#18181b] border border-[#27272a] flex items-center gap-1.5">
                 {[0, 0.2, 0.4].map((delay, i) => (
                   <div
                     key={i}
-                    className="w-1.5 h-1.5 rounded-full bg-blue-400"
+                    className="w-1.5 h-1.5 rounded-full bg-white"
                     style={{ animation: `pulse-dot 1.2s ${delay}s infinite` }}
                   />
                 ))}
@@ -121,12 +132,12 @@ export default function ChatPanel({
 
       {/* Suggested Prompts */}
       {!isGenerating && suggestions.length > 0 && (
-        <div className="px-4 pb-2.5 flex gap-1.5 overflow-x-auto scrollbar-hide select-none">
+        <div className="px-4 pb-2.5 flex gap-1.5 overflow-x-auto scrollbar-hide select-none bg-[#000000]">
           {suggestions.slice(0, 3).map((suggestion, i) => (
             <button
               key={i}
               onClick={() => onSelectSuggestion(suggestion)}
-              className="flex-shrink-0 text-[10px] px-2.5 py-1.5 rounded-full bg-[#161b27] border border-[#1e2733] text-[#8b95a7] hover:text-[#e8eaf0] hover:border-blue-500/30 transition-all font-semibold whitespace-nowrap cursor-pointer hover:bg-[#1e2433]"
+              className="flex-shrink-0 text-[10px] px-3 py-1.5 rounded bg-[#18181b] border border-[#27272a] text-[#a1a1aa] hover:text-white hover:border-[#52525b] hover:bg-[#27272a] transition-all font-semibold whitespace-nowrap cursor-pointer"
             >
               {suggestion}
             </button>
@@ -135,8 +146,8 @@ export default function ChatPanel({
       )}
 
       {/* Input Form Box */}
-      <div className="px-4 pb-4 pt-1.5 border-t border-[#1e2733]/40 bg-[#0c0d12]/50">
-        <div className="relative flex items-end gap-2 bg-[#161b27] border border-[#1e2733] rounded-xl overflow-hidden focus-within:border-blue-500/50 transition-colors">
+      <div className="px-4 pb-4 pt-1.5 border-t border-[#27272a] bg-[#09090b]">
+        <div className="relative flex items-end gap-2 bg-[#18181b] border border-[#27272a] rounded-lg overflow-hidden focus-within:border-[#52525b] transition-all">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -145,25 +156,25 @@ export default function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Describe design modifications..."
             disabled={isGenerating}
-            className="flex-1 px-3.5 py-3 bg-transparent text-xs text-[#e8eaf0] placeholder-[#4b5563] outline-none resize-none leading-relaxed min-h-[40px] max-h-[120px] custom-scrollbar"
+            className="flex-1 px-3.5 py-3 bg-transparent text-xs text-[#f4f4f5] placeholder-[#52525b] outline-none resize-none leading-relaxed min-h-[40px] max-h-[120px] custom-scrollbar"
           />
           <button
             onClick={onSend}
             disabled={!inputValue.trim() || isGenerating}
-            className={`m-2 p-2 rounded-lg transition-all flex items-center justify-center flex-shrink-0 select-none cursor-pointer ${
+            className={`m-2 p-2 rounded transition-all flex items-center justify-center flex-shrink-0 select-none cursor-pointer ${
               inputValue.trim() && !isGenerating
-                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/10'
-                : 'bg-[#1e2433] text-[#4b5563] cursor-not-allowed'
+                ? 'bg-white text-black hover:bg-[#e4e4e7]'
+                : 'bg-[#27272a] text-[#52525b] cursor-not-allowed'
             }`}
           >
             <Send className="w-3.5 h-3.5" />
           </button>
         </div>
         <div className="flex items-center justify-between mt-2 px-1 select-none">
-          <span className="text-[9px] text-[#4b5563] font-medium">↵ Send · ⇧↵ New line</span>
-          <span className="text-[9px] text-[#4b5563] font-medium flex items-center gap-1">
+          <span className="text-[9px] text-[#52525b] font-medium">↵ Send · ⇧↵ New line</span>
+          <span className="text-[9px] text-[#52525b] font-medium flex items-center gap-1">
             <MessageSquare className="w-2.5 h-2.5" />
-            Gemini BYOK Status
+            Gemini BYOK Active
           </span>
         </div>
       </div>

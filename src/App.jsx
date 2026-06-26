@@ -124,7 +124,7 @@ const getPreviewHtml = (state, theme = 'blue') => {
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 p-8 space-y-8 overflow-y-auto">
+  <main class="flex-grow p-8 space-y-8 overflow-y-auto">
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
@@ -197,108 +197,117 @@ const getPreviewHtml = (state, theme = 'blue') => {
 </html>`;
   }
 
-  // Base Landing Page templates (optionally with Pricing & Testimonials)
+  // Determine subcomponents rendering
   const showPricing = state === 'pricing' || state === 'pricing_purple' || state === 'pricing_testimonials';
   const showTestimonials = state === 'testimonials' || state === 'pricing_testimonials';
 
   const pricingSection = showPricing ? `
-  <section class="py-20 border-t border-white/5 bg-slate-900/30">
+  <!-- Pricing Section -->
+  <section class="py-20 border-t border-slate-800 bg-slate-900/10 section-block">
     <div class="max-w-5xl mx-auto px-6 text-center">
-      <h2 class="text-3xl font-bold text-white mb-4">Flexible Pricing Tiers</h2>
-      <p class="text-slate-400 max-w-md mx-auto mb-16 text-sm">Unlock the full power of AI generation workflows with transparent key configurations.</p>
+      <h2 class="text-3xl font-extrabold tracking-tight text-white mb-4">Flexible Pricing Tiers</h2>
+      <p class="text-slate-400 max-w-md mx-auto mb-10 text-sm">Unlock full scaling code generations with transparent BYOK billing options.</p>
       
+      <!-- Toggle Switched widget -->
+      <div class="flex items-center justify-center gap-3 mb-12">
+        <span class="text-xs font-bold text-slate-400">Monthly Billing</span>
+        <button id="billing-toggle" class="w-11 h-6 bg-slate-800 border border-slate-700 rounded-full p-0.5 relative transition-colors">
+          <div id="toggle-dot" class="w-4.5 h-4.5 bg-blue-500 rounded-full transition-transform duration-200" style="transform: translateX(0px);"></div>
+        </button>
+        <span class="text-xs font-bold text-blue-400">Annual Billing (Save 20%)</span>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <!-- Tier 1 -->
-        <div class="bg-slate-950 border border-white/5 p-8 rounded-2xl hover:border-white/10 transition-colors text-left flex flex-col justify-between">
+        <!-- Card 1 -->
+        <div class="bg-slate-950/40 border border-slate-800 hover:border-slate-700 p-8 rounded-2xl text-left flex flex-col justify-between transition-all">
           <div>
-            <h3 class="font-semibold text-lg text-white">Starter</h3>
-            <div class="text-2xl font-bold mt-4 text-white">Free</div>
-            <p class="text-slate-500 text-xs mt-2">Bring your own Gemini API keys and build locally.</p>
-            <ul class="space-y-3 mt-8 text-xs text-slate-400">
-              <li>✓ Basic UI Generations</li>
-              <li>✓ Local Iframe Previews</li>
-              <li>✓ Export Code Files</li>
+            <h3 class="font-bold text-base text-white">Starter</h3>
+            <div class="text-2xl font-black mt-4 text-white">Free</div>
+            <p class="text-slate-500 text-xs mt-2 leading-relaxed">Bring your own Google Gemini API keys and test setups locally.</p>
+            <ul class="space-y-3.5 mt-8 text-xs text-slate-400">
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Basic UI Generation</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Local Iframe Previews</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Export Code Files</li>
             </ul>
           </div>
-          <button class="w-full mt-8 py-2.5 border border-white/10 hover:bg-white/5 text-white rounded-xl text-xs font-semibold transition-all">Get Started</button>
+          <button class="w-full mt-8 py-3 border border-slate-800 hover:bg-white/5 text-white rounded-xl text-xs font-bold transition-all">Get Started</button>
         </div>
 
-        <!-- Tier 2 -->
-        <div class="bg-slate-950 border-2 border-blue-500/40 p-8 rounded-2xl relative text-left flex flex-col justify-between shadow-xl shadow-blue-500/5">
-          <span class="absolute top-0 right-6 -translate-y-1/2 bg-blue-600 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Popular</span>
+        <!-- Card 2 -->
+        <div class="bg-slate-950 border-2 border-blue-500/40 p-8 rounded-2xl relative text-left flex flex-col justify-between shadow-xl shadow-blue-500/5 transition-all">
+          <span class="absolute top-0 right-6 -translate-y-1/2 bg-blue-600 text-white text-[9px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider">Popular</span>
           <div>
-            <h3 class="font-semibold text-lg text-white">Professional</h3>
-            <div class="text-2xl font-bold mt-4 text-white">$29<span class="text-xs text-slate-500 font-normal">/mo</span></div>
-            <p class="text-slate-500 text-xs mt-2">Full Dyad orchestrator workspace with automatic key routing.</p>
-            <ul class="space-y-3 mt-8 text-xs text-slate-400">
-              <li>✓ Unlimited Complex Layouts</li>
-              <li>✓ Interactive Sandbox Previews</li>
-              <li>✓ Custom Component Sync</li>
-              <li>✓ High Priority Support</li>
+            <h3 class="font-bold text-base text-white">Professional</h3>
+            <div class="text-3xl font-black mt-4 text-white"><span class="price-value">$29</span><span class="text-xs text-slate-500 font-normal billing-cycle">/mo</span></div>
+            <p class="text-slate-500 text-xs mt-2 leading-relaxed">Full Dyad local desktop integration with automatic pipeline routing.</p>
+            <ul class="space-y-3.5 mt-8 text-xs text-slate-400">
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Unlimited Design Layouts</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Interactive Sandboxes</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Custom Sync Modules</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Priority API support</li>
             </ul>
           </div>
-          <button class="w-full mt-8 py-2.5 ${buttonBg} text-white rounded-xl text-xs font-semibold transition-all shadow-lg">Upgrade Now</button>
+          <button class="w-full mt-8 py-3 ${buttonBg} text-white rounded-xl text-xs font-bold transition-all shadow-lg">Upgrade Now</button>
         </div>
 
-        <!-- Tier 3 -->
-        <div class="bg-slate-950 border border-white/5 p-8 rounded-2xl hover:border-white/10 transition-colors text-left flex flex-col justify-between">
+        <!-- Card 3 -->
+        <div class="bg-slate-950/40 border border-slate-800 hover:border-slate-700 p-8 rounded-2xl text-left flex flex-col justify-between transition-all">
           <div>
-            <h3 class="font-semibold text-lg text-white">Enterprise</h3>
-            <div class="text-2xl font-bold mt-4 text-white">Custom</div>
-            <p class="text-slate-500 text-xs mt-2">Full scale observers and secure team workspaces.</p>
-            <ul class="space-y-3 mt-8 text-xs text-slate-400">
-              <li>✓ Custom CI/CD Test Hooks</li>
-              <li>✓ Unified Orchestration</li>
-              <li>✓ SOC2 Environment Hygiene</li>
+            <h3 class="font-bold text-base text-white">Enterprise</h3>
+            <div class="text-2xl font-black mt-4 text-white font-black">Custom</div>
+            <p class="text-slate-500 text-xs mt-2 leading-relaxed">Scale automated observing test runners across team repositories.</p>
+            <ul class="space-y-3.5 mt-8 text-xs text-slate-400">
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Custom observers</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> SOC2 credentials</li>
+              <li class="flex items-center gap-2"><span class="text-blue-500">✓</span> Dedicated runner VM</li>
             </ul>
           </div>
-          <button class="w-full mt-8 py-2.5 border border-white/10 hover:bg-white/5 text-white rounded-xl text-xs font-semibold transition-all">Talk to Sales</button>
+          <button class="w-full mt-8 py-3 border border-slate-800 hover:bg-white/5 text-white rounded-xl text-xs font-bold transition-all">Contact Sales</button>
         </div>
       </div>
     </div>
   </section>` : '';
 
   const testimonialsSection = showTestimonials ? `
-  <section class="py-20 border-t border-white/5">
-    <div class="max-w-5xl mx-auto px-6 text-center">
-      <h2 class="text-3xl font-bold text-white mb-4">Loved by AI Engineers</h2>
-      <p class="text-slate-400 max-w-md mx-auto mb-16 text-sm">Read how developers are using AgentFlow and Dyad to bootstrap landing pages in seconds.</p>
+  <!-- FAQ Accordion & Testimonials -->
+  <section class="py-20 border-t border-slate-800 section-block">
+    <div class="max-w-4xl mx-auto px-6">
+      <h2 class="text-3xl font-extrabold tracking-tight text-white mb-4 text-center">Frequently Asked Questions</h2>
+      <p class="text-slate-400 text-center max-w-sm mx-auto mb-12 text-sm">Find quick answers to common queries about local orchestrator integrations.</p>
       
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Review 1 -->
-        <div class="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-white">SR</div>
-            <div>
-              <div class="text-xs font-bold text-white">Sarah Reynolds</div>
-              <div class="text-[9px] text-slate-500 font-semibold">Lead Developer, StackInc</div>
-            </div>
+      <!-- Accordion Grid -->
+      <div class="space-y-4 max-w-2xl mx-auto">
+        <!-- FAQ 1 -->
+        <div class="faq-item bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden transition-all">
+          <button class="faq-question w-full px-5 py-4 text-left text-xs font-bold text-white flex justify-between items-center outline-none">
+            <span>How does the BYOK (Bring Your Own Key) architecture work?</span>
+            <span class="faq-chevron text-[#4b5563] transition-transform duration-200">▼</span>
+          </button>
+          <div class="faq-answer hidden px-5 pb-4 text-xs text-slate-400 leading-relaxed border-t border-slate-850 pt-2">
+            The BYOK mechanism stores credentials locally in environment files (\`.env.local\`). It sends prompts directly to your Gemini API endpoints, guaranteeing zero cloud storage of billing tokens.
           </div>
-          <p class="text-slate-400 text-xs leading-relaxed">"The speed of compiling components using the Gemini 2.5 backend is incredible. Dynamic updates load in seconds!"</p>
         </div>
 
-        <!-- Review 2 -->
-        <div class="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-white">ML</div>
-            <div>
-              <div class="text-xs font-bold text-white">Marcus Lee</div>
-              <div class="text-[9px] text-slate-500 font-semibold">Founder, BuildFast</div>
-            </div>
+        <!-- FAQ 2 -->
+        <div class="faq-item bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden transition-all">
+          <button class="faq-question w-full px-5 py-4 text-left text-xs font-bold text-white flex justify-between items-center outline-none">
+            <span>Can I export generated workspaces?</span>
+            <span class="faq-chevron text-[#4b5563] transition-transform duration-200">▼</span>
+          </button>
+          <div class="faq-answer hidden px-5 pb-4 text-xs text-slate-400 leading-relaxed border-t border-slate-850 pt-2">
+            Yes! Clicking the "Export" button packages all JSX components, HTML indices, and CSS files into a download package locally.
           </div>
-          <p class="text-slate-400 text-xs leading-relaxed">"Client-side ZIP export makes bootstrapping projects an absolute breeze. Zero lag, zero boilerplates, just clean code."</p>
         </div>
 
-        <!-- Review 3 -->
-        <div class="bg-slate-900/40 border border-white/5 p-6 rounded-2xl text-left">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-white">TD</div>
-            <div>
-              <div class="text-xs font-bold text-white">Tanya Devry</div>
-              <div class="text-[9px] text-slate-500 font-semibold">AI Consultant</div>
-            </div>
+        <!-- FAQ 3 -->
+        <div class="faq-item bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden transition-all">
+          <button class="faq-question w-full px-5 py-4 text-left text-xs font-bold text-white flex justify-between items-center outline-none">
+            <span>Does it support Tailwind CSS v4?</span>
+            <span class="faq-chevron text-[#4b5563] transition-transform duration-200">▼</span>
+          </button>
+          <div class="faq-answer hidden px-5 pb-4 text-xs text-slate-400 leading-relaxed border-t border-slate-850 pt-2">
+            Fully. All compilation targets are compiled for Tailwind CSS v4, supporting CSS-only imports and optimized utility flags.
           </div>
-          <p class="text-slate-400 text-xs leading-relaxed">"The integration of BYOK ensures complete data security. We can input keys directly without worry about leaks."</p>
         </div>
       </div>
     </div>
@@ -313,33 +322,87 @@ const getPreviewHtml = (state, theme = 'blue') => {
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Outfit', sans-serif; background-color: #020617; }
+    body { 
+      font-family: 'Outfit', sans-serif; 
+      background-color: #020617; 
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    /* Light Theme mappings */
+    body.light-theme {
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    body.light-theme nav {
+      background-color: rgba(248, 250, 252, 0.85);
+      border-bottom-color: rgba(15, 23, 42, 0.08);
+    }
+    body.light-theme nav span, body.light-theme nav a {
+      color: #0f172a;
+    }
+    body.light-theme nav a:hover {
+      color: #3b82f6;
+    }
+    body.light-theme h1, body.light-theme h2, body.light-theme h3 {
+      color: #0f172a;
+    }
+    body.light-theme p, body.light-theme li {
+      color: #334155;
+    }
+    body.light-theme .bg-slate-950, body.light-theme .bg-slate-950\\/40, body.light-theme .faq-item {
+      background-color: #ffffff;
+      border-color: rgba(15, 23, 42, 0.08);
+    }
+    body.light-theme .section-block {
+      background-color: #f1f5f9/30;
+      border-top-color: rgba(15, 23, 42, 0.08);
+    }
+    body.light-theme .border-white\\/5, body.light-theme .border-slate-800, body.light-theme border-t {
+      border-color: rgba(15, 23, 42, 0.08);
+    }
+    body.light-theme .text-slate-400 {
+      color: #475569;
+    }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col justify-between bg-slate-950">
+<body class="text-slate-100 min-h-screen flex flex-col justify-between bg-slate-950 relative overflow-x-hidden">
+  <!-- Glowing Background Blobs -->
+  <div class="absolute top-20 left-1/4 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl mix-blend-screen animate-pulse pointer-events-none"></div>
+  <div class="absolute top-40 right-1/4 w-72 h-72 bg-purple-600/10 rounded-full blur-3xl mix-blend-screen animate-pulse pointer-events-none" style="animation-delay: 2s"></div>
+
   <!-- Navigation Header -->
-  <nav class="border-b border-white/5 bg-slate-950/65 backdrop-blur-md sticky top-0 z-50">
+  <nav class="border-b border-white/5 bg-slate-950/65 backdrop-blur-md sticky top-0 z-50 transition-colors">
     <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br ${logoBg} flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/10">A</div>
-        <span class="font-semibold text-white tracking-wide">AgentFlow</span>
+        <span class="font-bold text-white tracking-wide text-sm">AgentFlow</span>
       </div>
-      <div class="flex items-center gap-6 text-sm text-slate-400 font-medium">
+      <div class="flex items-center gap-6 text-xs text-slate-400 font-semibold">
         <a href="#" class="hover:text-white transition-colors">Features</a>
         <a href="#" class="hover:text-white transition-colors">Pricing</a>
-        <a href="#" class="hover:text-white transition-colors">Docs</a>
-        <button class="${buttonBg} text-white px-4 py-2 rounded-lg text-xs font-semibold transition-all shadow-lg">Get Started</button>
+        <a href="#" class="hover:text-white transition-colors">FAQs</a>
+        
+        <!-- Theme Toggle button -->
+        <button id="theme-toggle" class="p-1 rounded-md text-slate-400 hover:text-white transition-colors outline-none cursor-pointer">
+          <svg id="moon-icon" class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <svg id="sun-icon" class="w-4.5 h-4.5 hidden text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m2.828 0l-.707-.707m12.728-12.728l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+          </svg>
+        </button>
+
+        <button class="${buttonBg} text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg">Get Started</button>
       </div>
     </div>
   </nav>
 
   <!-- Hero Content -->
-  <main class="flex-grow max-w-4xl mx-auto px-6 py-24 text-center">
-    <div class="inline-flex items-center gap-2 ${tagBg} ${tagText} text-xs px-3.5 py-1.5 rounded-full mb-8 font-semibold">
+  <main class="flex-grow max-w-4xl mx-auto px-6 py-20 text-center relative z-10">
+    <div class="inline-flex items-center gap-2 ${tagBg} ${tagText} text-[10px] px-3.5 py-1.5 rounded-full mb-8 font-extrabold uppercase tracking-wider">
       <span class="w-1.5 h-1.5 rounded-full ${isPurple ? 'bg-purple-400' : 'bg-blue-400'} animate-pulse"></span>
       AI-Powered Interface Generation
     </div>
-    <h1 class="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight tracking-tight">
+    <h1 class="text-4xl md:text-5xl font-black text-white mb-6 leading-tight tracking-tight">
       Build Professional Frontends<br/>
       <span class="text-transparent bg-clip-text bg-gradient-to-r ${brandGradient}">
         Powered by Gemini AI
@@ -349,28 +412,158 @@ const getPreviewHtml = (state, theme = 'blue') => {
       Describe your dashboard, page, or UI interface, and our AI development agent compiles clean, production-ready React components with Tailwind CSS instantly.
     </p>
     <div class="flex items-center gap-4 justify-center">
-      <button class="${buttonBg} text-white px-6 py-2.5 rounded-xl text-xs font-semibold transition-all hover:scale-[1.02] shadow-lg">Launch Agent</button>
-      <button class="border border-white/10 hover:bg-white/5 text-white px-6 py-2.5 rounded-xl text-xs font-semibold transition-all">Learn More</button>
+      <button class="${buttonBg} text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-[1.02] shadow-lg">Launch Agent</button>
+      <button class="border border-white/10 hover:bg-white/5 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all">Learn More</button>
+    </div>
+
+    <!-- Product Demo Mockup Runner Widget (Nested Loop) -->
+    <div class="mt-20 max-w-2xl mx-auto bg-slate-900/40 border border-slate-800 rounded-2xl p-6 text-left relative shadow-2xl backdrop-blur-md">
+      <div class="flex items-center gap-1.5 mb-4 select-none">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        <span class="text-[10px] font-bold text-slate-500 ml-2">agentflow-compiler-mockup.sh</span>
+      </div>
+      
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input 
+          type="text" 
+          value="Build me a modern SaaS landing page with pricing tiers" 
+          readonly 
+          class="flex-1 bg-slate-950 border border-slate-850 px-3.5 py-2.5 rounded-xl text-xs text-slate-300 font-mono outline-none"
+        />
+        <button 
+          id="run-demo-btn" 
+          class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all select-none shadow-lg cursor-pointer"
+        >
+          Run Demo
+        </button>
+      </div>
+
+      <!-- Compiling progress -->
+      <div id="demo-status" class="hidden mt-4 space-y-2.5">
+        <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+          <span id="demo-output">Initializing compiler nodes...</span>
+        </div>
+        <div class="h-1 bg-slate-950 rounded-full overflow-hidden">
+          <div id="demo-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%;"></div>
+        </div>
+      </div>
     </div>
   </main>
 
   <!-- Pricing -->
   ${pricingSection}
 
-  <!-- Testimonials -->
+  <!-- FAQs -->
   ${testimonialsSection}
 
   <!-- Footer -->
-  <footer class="border-t border-white/5 bg-slate-950 py-8">
-    <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between text-slate-500 text-[11px] gap-4">
+  <footer class="border-t border-slate-800 bg-slate-950 py-8 transition-colors">
+    <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between text-slate-500 text-[10px] font-semibold gap-4 select-none">
       <span>&copy; ${new Date().getFullYear()} AgentFlow Inc. All rights reserved.</span>
-      <div class="flex gap-6 font-semibold">
+      <div class="flex gap-6">
         <a href="#" class="hover:text-slate-300 transition-colors">Privacy</a>
         <a href="#" class="hover:text-slate-300 transition-colors">Terms</a>
         <a href="#" class="hover:text-slate-300 transition-colors">Contact Support</a>
       </div>
     </div>
   </footer>
+
+  <!-- Dynamic Actions Script -->
+  <script>
+    // 1. Billing Switcher
+    const billingToggle = document.getElementById('billing-toggle');
+    const toggleDot = document.getElementById('toggle-dot');
+    const priceValues = document.querySelectorAll('.price-value');
+    const billingCycles = document.querySelectorAll('.billing-cycle');
+
+    let isAnnually = false;
+
+    if (billingToggle) {
+      billingToggle.addEventListener('click', () => {
+        isAnnually = !isAnnually;
+        if (isAnnually) {
+          toggleDot.style.transform = 'translateX(1.25rem)';
+          if (priceValues[0]) priceValues[0].textContent = '$23';
+          billingCycles.forEach(c => c.textContent = '/mo, billed annually');
+        } else {
+          toggleDot.style.transform = 'translateX(0px)';
+          if (priceValues[0]) priceValues[0].textContent = '$29';
+          billingCycles.forEach(c => c.textContent = '/mo');
+        }
+      });
+    }
+
+    // 2. Light/Dark Theme Switcher
+    const themeToggle = document.getElementById('theme-toggle');
+    const sunIcon = document.getElementById('sun-icon');
+    const moonIcon = document.getElementById('moon-icon');
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('light-theme');
+        const isLight = document.body.classList.contains('light-theme');
+        if (isLight) {
+          sunIcon.classList.remove('hidden');
+          moonIcon.classList.add('hidden');
+        } else {
+          sunIcon.classList.add('hidden');
+          moonIcon.classList.remove('hidden');
+        }
+      });
+    }
+
+    // 3. FAQ Accordion Collapsibles
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    faqQuestions.forEach(q => {
+      q.addEventListener('click', () => {
+        const item = q.closest('.faq-item');
+        const ans = item.querySelector('.faq-answer');
+        const chev = item.querySelector('.faq-chevron');
+        const isClosed = ans.classList.contains('hidden');
+
+        // Close all first for clean single accordion behavior
+        document.querySelectorAll('.faq-answer').forEach(a => a.classList.add('hidden'));
+        document.querySelectorAll('.faq-chevron').forEach(c => c.style.transform = 'rotate(0deg)');
+
+        if (isClosed) {
+          ans.classList.remove('hidden');
+          chev.style.transform = 'rotate(180deg)';
+        }
+      });
+    });
+
+    // 4. Product compiler mockup demo
+    const runDemoBtn = document.getElementById('run-demo-btn');
+    const demoStatus = document.getElementById('demo-status');
+    const demoBar = document.getElementById('demo-bar');
+    const demoOutput = document.getElementById('demo-output');
+
+    if (runDemoBtn) {
+      runDemoBtn.addEventListener('click', () => {
+        runDemoBtn.disabled = true;
+        demoStatus.classList.remove('hidden');
+        demoBar.style.width = '0%';
+        demoOutput.textContent = 'Initializing virtual bundler nodes...';
+        
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 25;
+          demoBar.style.width = progress + '%';
+          if (progress === 25) demoOutput.textContent = 'Analyzing syntax declarations...';
+          if (progress === 50) demoOutput.textContent = 'Bundling Tailwind utility classes...';
+          if (progress === 75) demoOutput.textContent = 'Compiling hot reload assets...';
+          
+          if (progress >= 100) {
+            clearInterval(interval);
+            demoOutput.innerHTML = '<span class="text-emerald-400 font-bold">✓ Project built live in 12ms!</span>';
+            runDemoBtn.disabled = false;
+          }
+        }, 300);
+      });
+    }
+  </script>
 </body>
 </html>`;
 };
@@ -398,6 +591,46 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('preview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Layout sizing & maximizing states
+  const [explorerWidth, setExplorerWidth] = useState(200);
+  const [chatWidth, setChatWidth] = useState(380);
+  const [isDraggingExplorer, setIsDraggingExplorer] = useState(false);
+  const [isDraggingChat, setIsDraggingChat] = useState(false);
+  const [maximizedPanel, setMaximizedPanel] = useState(null);
+
+  // Telemetry compilation speed stats
+  const [compileTimes, setCompileTimes] = useState([120, 150, 110, 142, 128]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isDraggingExplorer) {
+        const newWidth = Math.max(150, Math.min(350, e.clientX));
+        setExplorerWidth(newWidth);
+      }
+      if (isDraggingChat) {
+        const offset = sidebarOpen ? explorerWidth : 0;
+        const newChatWidth = e.clientX - offset;
+        setChatWidth(Math.max(260, Math.min(600, newChatWidth)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingExplorer(false);
+      setIsDraggingChat(false);
+    };
+
+    if (isDraggingExplorer || isDraggingChat) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingExplorer, isDraggingChat, explorerWidth, sidebarOpen]);
+
 
   // Chat message feed
   const [messages, setMessages] = useState([
@@ -645,6 +878,11 @@ export default function App() {
     setExpandedFolders(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleSelectFile = (file) => {
+    setActiveFile(file);
+    setActiveTab('code');
+  };
+
   // Compile Pipeline Simulator
   const triggerHmrBuild = (targetState, targetTheme) => {
     setIsGenerating(true);
@@ -671,6 +909,7 @@ export default function App() {
         setProjectState(targetState);
         setTheme(targetTheme);
         updateVirtualFiles(targetState, targetTheme);
+        setCompileTimes(prev => [...prev.slice(1), Math.floor(Math.random() * 80) + 90]);
         
         addLog('success', '✓ Compiled and refreshed live development runner successfully');
         return;
@@ -812,7 +1051,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0b0e] text-[#e8eaf0] overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#000000] text-[#f4f4f5] overflow-hidden">
       {/* Header navbar */}
       <Header
         isGenerating={isGenerating}
@@ -828,47 +1067,78 @@ export default function App() {
       />
 
       {/* Main Panel Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar explorer */}
-        {sidebarOpen && (
-          <Sidebar
-            files={files}
-            activeFile={activeFile}
-            onSelectFile={setActiveFile}
-            expandedFolders={expandedFolders}
-            onToggleFolder={toggleFolder}
+        {sidebarOpen && (maximizedPanel === null || maximizedPanel === 'explorer') && (
+          <div style={{ width: maximizedPanel === 'explorer' ? '100%' : explorerWidth }} className="h-full flex flex-col flex-shrink-0">
+            <Sidebar
+              files={files}
+              activeFile={activeFile}
+              onSelectFile={handleSelectFile}
+              expandedFolders={expandedFolders}
+              onToggleFolder={toggleFolder}
+              onMaximize={() => setMaximizedPanel(maximizedPanel === 'explorer' ? null : 'explorer')}
+              isMaximized={maximizedPanel === 'explorer'}
+            />
+          </div>
+        )}
+
+        {maximizedPanel === null && sidebarOpen && (
+          <div 
+            className={`resizer-gutter ${isDraggingExplorer ? 'dragging' : ''}`}
+            onMouseDown={() => setIsDraggingExplorer(true)}
           />
         )}
 
         {/* Chat window */}
-        <ChatPanel
-          messages={messages}
-          inputValue={inputValue}
-          setInputValue={setInputValue}
-          onSend={handleSendPrompt}
-          isGenerating={isGenerating}
-          suggestions={[
-            'Add a pricing table',
-            'Change color scheme to purple gradient',
-            'Add a testimonials section',
-            'Create a dashboard layout'
-          ]}
-          onSelectSuggestion={handleSendPrompt}
-          config={config}
-        />
+        {(maximizedPanel === null || maximizedPanel === 'chat') && (
+          <div style={{ width: maximizedPanel === 'chat' ? '100%' : chatWidth }} className="h-full flex flex-col flex-shrink-0">
+            <ChatPanel
+              messages={messages}
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              onSend={handleSendPrompt}
+              isGenerating={isGenerating}
+              suggestions={[
+                'Add a pricing table',
+                'Change color scheme to purple gradient',
+                'Add a testimonials section',
+                'Create a dashboard layout'
+              ]}
+              onSelectSuggestion={handleSendPrompt}
+              config={config}
+              onMaximize={() => setMaximizedPanel(maximizedPanel === 'chat' ? null : 'chat')}
+              isMaximized={maximizedPanel === 'chat'}
+            />
+          </div>
+        )}
+
+        {maximizedPanel === null && (
+          <div 
+            className={`resizer-gutter ${isDraggingChat ? 'dragging' : ''}`}
+            onMouseDown={() => setIsDraggingChat(true)}
+          />
+        )}
 
         {/* Live Preview Panel */}
-        <PreviewPanel
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          isGenerating={isGenerating}
-          statusMessage={statusMessage}
-          previewHtml={getPreviewHtml(projectState, theme)}
-          selectedFile={activeFile}
-          logs={logs}
-          onClearLogs={() => setLogs([])}
-          onRefreshPreview={() => triggerHmrBuild(projectState, theme)}
-        />
+        {(maximizedPanel === null || maximizedPanel === 'preview') && (
+          <div className="flex-1 h-full min-w-0">
+            <PreviewPanel
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              isGenerating={isGenerating}
+              statusMessage={statusMessage}
+              previewHtml={getPreviewHtml(projectState, theme)}
+              selectedFile={activeFile}
+              logs={logs}
+              onClearLogs={() => setLogs([])}
+              onRefreshPreview={() => triggerHmrBuild(projectState, theme)}
+              onMaximize={() => setMaximizedPanel(maximizedPanel === 'preview' ? null : 'preview')}
+              isMaximized={maximizedPanel === 'preview'}
+              compileTimes={compileTimes}
+            />
+          </div>
+        )}
       </div>
 
       {/* Settings Dialog Modal */}
